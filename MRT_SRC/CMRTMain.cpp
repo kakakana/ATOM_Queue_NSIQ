@@ -149,7 +149,6 @@ int CMRTMain::CreateMempool()
 //! Run Process
 /*!
  * \brief Run Process for CMRT Process
- * \param NULL
  * \return Succ 0, Fail -1
  */
 int CMRTMain::Run()

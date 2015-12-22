@@ -64,11 +64,14 @@ class CMRTMain
 		//! Destructor.
 		~CMRTMain();
 
-		//! Init Class
+		//! Initialize
 		int Initialize();
 		//! Run Process
 		int Run();
 
+	/*!
+	 * \private
+	 */
 	private:
 		//! Log Path 
 		char m_strLogPath[DEF_MEM_BUF_256];
