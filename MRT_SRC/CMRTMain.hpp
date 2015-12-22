@@ -83,6 +83,8 @@ class CMRTMain
 	private:
 		//! Log Path 
 		char m_strLogPath[DEF_MEM_BUF_256];
+		//! Log Path Pointer
+		char *m_pLogPath;
 		//! Ring For to Communicate to Application
 		struct rte_ring *m_pstRingInfo;
 		//! Memory Pool For using in Application 

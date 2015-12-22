@@ -42,6 +42,8 @@
  */
 CMRTMain::CMRTMain(char *a_strLogPath)
 {
+	m_pLogPath = NULL;
+
 	//Copy Log path
 	memset(m_strLogPath, 0x00, sizeof(m_strLogPath));
 
@@ -49,6 +51,8 @@ CMRTMain::CMRTMain(char *a_strLogPath)
 	if(a_strLogPath)
 	{
 		snprintf(m_strLogPath, sizeof(m_strLogPath), "%s",  a_strLogPath);
+		m_pLogPath = m_strLogPath;
+		
 	}
 
 	//Init Variables
@@ -81,12 +85,12 @@ int CMRTMain::Initialize()
 	//Set Process Type (primary)
 	rte_eal_set_proc_type(RTE_PROC_PRIMARY);
 	//Init to DPDK Library	
-	ret = rte_eal_init(m_strLogPath);
+	ret = rte_eal_init(m_pLogPath);
 
 	//Failed
 	if(ret < 0)
 	{
-		RTE_LOG (INFO, EAL, "Cannot init MRT\n");
+		RTE_LOG (ERR, EAL, "Cannot init MRT\n");
 		return -1;
 	}
 
@@ -97,7 +101,7 @@ int CMRTMain::Initialize()
 	m_pstRingInfo = rte_ring_create((char*)DEF_RING_INFO_NAME, DEF_RING_SIZE, SOCKET_ID_ANY, 0);	
 	if(m_pstRingInfo == NULL)
 	{
-		RTE_LOG (INFO, EAL, "Cannot Create ring\n");
+		RTE_LOG (ERR, RING, "Cannot Create ring\n");
 		return -1;
 	}
 
@@ -111,9 +115,9 @@ int CMRTMain::Initialize()
 										DEF_MBUF_SIZE, DEF_MBUF_CACHE_SIZE,
 										sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init,
 										NULL, rte_pktmbuf_init, NULL, SOCKET_ID_ANY, 0); 
-	if(m_pstMemPool)
+	if(m_pstMemPool == NULL)
 	{
-		RTE_LOG (INFO, EAL, "Cannot Create Memory Pool\n");
+		RTE_LOG (ERR, MEMPOOL, "Cannot Create Memory Pool\n");
 		return -1;
 	}
 
@@ -139,7 +143,7 @@ int CMRTMain::CreateRing(char *a_strName, int a_nSize)
 		//Ring exist
 		if(rte_errno == EEXIST)
 		{
-			RTE_LOG(INFO, EAL, "Ring %s is exist\n", a_strName);
+			RTE_LOG(ERR, RING, "Ring %s is exist\n", a_strName);
 			return 0;
 		}
 
@@ -147,7 +151,7 @@ int CMRTMain::CreateRing(char *a_strName, int a_nSize)
 	}
 
 
-	RTE_LOG(INFO, EAL, "ring (%s/%x) is %p\n", a_strName, a_nSize, tmpRing);
+	RTE_LOG(INFO, RING, "ring (%s/%x) is %p\n", a_strName, a_nSize, tmpRing);
 
 	return 0;
 }
@@ -194,7 +198,7 @@ int CMRTMain::Run()
 
 		if( CreateRing(pRingInfo->strName, pRingInfo->nSize) < 0 )
 		{
-			RTE_LOG(INFO, EAL, "Create (%s) Ring Failed\n", pRingInfo->strName);
+			RTE_LOG(ERR, RING, "Create (%s) Ring Failed\n", pRingInfo->strName);
 			return -1;
 		}
 	}

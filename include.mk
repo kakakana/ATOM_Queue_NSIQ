@@ -6,24 +6,23 @@ OS			:= $(shell uname -s )
 PREFIX		:= $(dir $(word $(words $(MAKEFILE_LIST)), $(MAKEFILE_LIST)))
 
 LQ_COMMON_LIB	= liblq_comm.a
-LQ_RING_LIB		= liblq_ring.a
-LQ_MEMPOOL_LIB	= liblq_mempool.a
-LQ_MBUF_LIB		= liblq_mbuf.a
+LQ_API_LIB		= liblq_api.a
 
 INCDIR		= -I$(PREFIX)COMMON/include
+INCDIR		= -I$(PREFIX)LQ_API
 #INCDIR		+= -I$(PREFIX)RING/include
 #INCDIR		+= -I$(PREFIX)MEMPOOL/include
 #INCDIR		+= -I$(PREFIX)MBUF/include
 
 LIBDIR		= -L$(PREFIX)COMMON
-#LIBDIR		+= -L$(PREFIX)MEMPOOL
+LIBDIR		+= -L$(PREFIX)LQ_API
 #LIBDIR		+= -L$(PREFIX)MBUF
 #LIBDIR		+= -L$(PREFIX)RING
 
 LIBS		=  -lpthread -lz -lstdc++
 LIBS		+= -ldl -lrt
 #LIBS		+= -llq_mbuf -llq_comm -llq_ring -llq_mempool
-LIBS		+= -llq_comm 
+LIBS		+= -llq_comm -llq_api
  
 
 INSTALLDIR	= $(HOME)/BIN
