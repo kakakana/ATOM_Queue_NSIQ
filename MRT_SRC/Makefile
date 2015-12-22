@@ -3,7 +3,7 @@ include ../include.mk
 #CFLAGS += -DNCURSES_ON
 default : all
 
-EXES = TEST_MRT
+EXES = MRT_TEST
 
 OBJS = main.o
 
