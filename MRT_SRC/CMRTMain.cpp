@@ -60,7 +60,6 @@ CMRTMain::CMRTMain(char *a_strLogPath)
 //! Destructor
 /*!
  * \brief Destructor For CMRTMain Class
- *
  * \details Init Variables and Delete Memory
  */
 CMRTMain::~CMRTMain()
@@ -125,10 +124,30 @@ int CMRTMain::Initialize()
 /*! 
  * \brief Create the Ring for enqeueing elements
  * \param a_strName is name for ring
+ * \param a_Size is count of Ring Elements
  * \return Succ 0, Fail -1
  */
-int CMRTMain::CreateRing(char *a_strName)
+int CMRTMain::CreateRing(char *a_strName, int a_nSize)
 {
+	struct rte_ring *tmpRing = NULL;
+
+	//Call to Ring Create Function in DPDK Lib
+	tmpRing = rte_ring_create(a_strName, a_nSize, SOCKET_ID_ANY, 0);
+
+	if(tmpRing == NULL)
+	{
+		//Ring exist
+		if(rte_errno == EEXIST)
+		{
+			RTE_LOG(INFO, EAL, "Ring %s is exist\n", a_strName);
+			return 0;
+		}
+
+		return -1;
+	}
+
+
+	RTE_LOG(INFO, EAL, "ring (%s/%x) is %p\n", a_strName, a_nSize, tmpRing);
 
 	return 0;
 }
@@ -153,6 +172,32 @@ int CMRTMain::CreateMempool()
  */
 int CMRTMain::Run()
 {
+	//Message Object
+	void *pMsgs = NULL;
+	//Memory Buffer Pointer in Ring
+	struct rte_mbuf *m = NULL;
+	//Ring Info Pointer
+	RING_INFO *pRingInfo = NULL;
+
+	while(1)
+	{
+		while(unlikely(rte_ring_dequeue(m_pstRingInfo, &pMsgs) != 0))
+		{
+			usleep(3000);
+		}
+
+		//Assign Memory Buffer
+		m = (struct rte_mbuf*)pMsgs;
+
+		//Move to Data Position in Memory Buffer
+		pRingInfo = rte_pktmbuf_mtod(m, RING_INFO*);
+
+		if( CreateRing(pRingInfo->strName, pRingInfo->nSize) < 0 )
+		{
+			RTE_LOG(INFO, EAL, "Create (%s) Ring Failed\n", pRingInfo->strName);
+			return -1;
+		}
+	}
 
 	return 0;
 }

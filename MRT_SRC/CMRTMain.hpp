@@ -51,6 +51,16 @@
  */
 #define DEF_MBUF_SIZE ( DEF_MBUF_DATA_SIZE + DEF_MBUF_OVERHEAD )
 
+//! Define Ring Info Structure
+/*!
+ * Structure for Ring Info
+ * to Use in Application For to Create Ring
+ */
+typedef struct _ring_info
+{
+	char	strName[128];	//!< Name of Ring
+	int		nSize;			//!< Size of Ring
+} RING_INFO;
 
 /*!
  * \class CMRTMain
@@ -69,9 +79,6 @@ class CMRTMain
 		//! Run Process
 		int Run();
 
-	/*!
-	 * \private
-	 */
 	private:
 		//! Log Path 
 		char m_strLogPath[DEF_MEM_BUF_256];
@@ -80,7 +87,7 @@ class CMRTMain
 		//! Memory Pool For using in Application 
 		struct rte_mempool *m_pstMemPool;
 		//! Create the Ring
-		int CreateRing(char *a_strName);
+		int CreateRing(char *a_strName, int a_nSize);
 		//! Create Mempool
 		int CreateMempool();
 
