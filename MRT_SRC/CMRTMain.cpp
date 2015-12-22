@@ -73,7 +73,6 @@ CMRTMain::~CMRTMain()
 //! Initialize
 /*!
  * \brief Init Variables and DPDK Library
- * \param NULL
  * \return Succ 0, Fail -1
  */
 int CMRTMain::Initialize()
@@ -112,7 +111,7 @@ int CMRTMain::Initialize()
 	m_pstMemPool = rte_mempool_create(DEF_MEMORY_POOL_NAME, DEF_MBUF_COUNT,
 										DEF_MBUF_SIZE, DEF_MBUF_CACHE_SIZE,
 										sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init,
-										NULL, rte_pktmbuf_init, NULL, SOCKET_ID_NAY, 0); 
+										NULL, rte_pktmbuf_init, NULL, SOCKET_ID_ANY, 0); 
 	if(m_pstMemPool)
 	{
 		RTE_LOG (INFO, EAL, "Cannot Create Memory Pool\n");
@@ -138,7 +137,6 @@ int CMRTMain::CreateRing(char *a_strName)
 //! Create Mempool 
 /*!
  * \brief Create Mempool For Ring info to use in Application
- * \param NULL
  * \return Succ 0, Fail -1
  */
 int CMRTMain::CreateMempool()
@@ -163,7 +161,8 @@ int CMRTMain::Run()
 //! Main Function
 /*!
  * \brief main Function For MRT Process
- * \param Argument count, String Array of Arguments
+ * \param argc is Arguments count
+ * \param args is String Array of Arguments
  * \return Succ 0, Fail -1
  */
 int main(int argc, char *args[])
