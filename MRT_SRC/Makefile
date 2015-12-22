@@ -5,7 +5,7 @@ default : all
 
 EXES = TEST_MRT
 
-OBJS = main.o
+OBJS = CMRTMain.o
 
 .PHONY: all clean distclean
 
