@@ -53,7 +53,8 @@
 
 //! Define Ring Info Structure
 /*!
- * Structure for Ring Info
+ * \struct _ring_info
+ * \brief Structure for Ring Info
  * to Use in Application For to Create Ring
  */
 typedef struct _ring_info
