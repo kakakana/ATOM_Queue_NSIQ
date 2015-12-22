@@ -1,9 +1,13 @@
+/*!
+ * \file CMRTMain.hpp
+ * \brief MRT Main Class Header File
+ */
 #ifndef _MRT_MAIN_H_
 #define _MRT_MAIN_H_
 
-//! MRT Main Class
 /*!
- * Init MRT Main Class Header Files
+ * \class CMRTMain
+ * \brief CMRT Main Class
  */
 class CMRTMain
 {
