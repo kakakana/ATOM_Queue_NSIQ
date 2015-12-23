@@ -2,7 +2,7 @@ include ../include.mk
 
 default : all
 
-OBJS = 	CLQManager.cpp
+OBJS = 	CLQManager.o
 
 .PHONY: all clean distclean
 

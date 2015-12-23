@@ -9,7 +9,7 @@ LQ_COMMON_LIB	= liblq_comm.a
 LQ_API_LIB		= liblq_api.a
 
 INCDIR		= -I$(PREFIX)COMMON/include
-INCDIR		= -I$(PREFIX)LQ_API
+INCDIR		+= -I$(PREFIX)LQ_API
 #INCDIR		+= -I$(PREFIX)RING/include
 #INCDIR		+= -I$(PREFIX)MEMPOOL/include
 #INCDIR		+= -I$(PREFIX)MBUF/include
@@ -22,7 +22,7 @@ LIBDIR		+= -L$(PREFIX)LQ_API
 LIBS		=  -lpthread -lz -lstdc++
 LIBS		+= -ldl -lrt
 #LIBS		+= -llq_mbuf -llq_comm -llq_ring -llq_mempool
-LIBS		+= -llq_comm -llq_api
+#LIBS		+= -llq_comm -llq_api
  
 
 INSTALLDIR	= $(HOME)/BIN
@@ -69,7 +69,7 @@ ifeq ("$(V)", "1")
 	PROC		= proc
 else
 	CC			= @echo "        CC      " $@; gcc
-	CXX			= @echo "        CXX     " $@; g++
+	CXX			= @echo "        CXX     "$@; g++
 	RM			= @rm -f
 	CP			= @cp -f
 	MV			= @mv -f

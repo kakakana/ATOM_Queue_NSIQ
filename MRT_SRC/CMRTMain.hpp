@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//! Define Memory Buffer 265 byte
+//! Define Memory Buffer 128 byte
+#define DEF_MEM_BUF_128		128
+
+//! Define Memory Buffer 256 byte
 #define DEF_MEM_BUF_256		256
 
 //! Define Default Ring Size, (262,144)
@@ -27,7 +30,7 @@
 /*!
  * Memory Pool Name For to Use in Application
  */
-#define DEF_MEMORY_POOL_NAME	"BASE_MEMORY_POOL"  
+#define DEF_BASE_MEMORY_POOL_NAME	"BASE_MEMORY_POOL"  
 
 //! Define Memory Buffer Elements Count
 /*!
@@ -59,7 +62,7 @@
  */
 typedef struct _ring_info
 {
-	char	strName[128];	//!< Name of Ring
+	char	strName[DEF_MEM_BUF_128];	//!< Name of Ring
 	int		nSize;			//!< Size of Ring
 } RING_INFO;
 

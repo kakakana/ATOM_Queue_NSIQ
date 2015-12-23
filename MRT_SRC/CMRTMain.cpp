@@ -111,7 +111,7 @@ int CMRTMain::Initialize()
 	 * element Init Func, element Init Func Argument
 	 * Memory Socket ID, Flags
 	 */
-	m_pstMemPool = rte_mempool_create(DEF_MEMORY_POOL_NAME, DEF_MBUF_COUNT,
+	m_pstMemPool = rte_mempool_create(DEF_BASE_MEMORY_POOL_NAME, DEF_MBUF_COUNT,
 										DEF_MBUF_SIZE, DEF_MBUF_CACHE_SIZE,
 										sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init,
 										NULL, rte_pktmbuf_init, NULL, SOCKET_ID_ANY, 0); 
