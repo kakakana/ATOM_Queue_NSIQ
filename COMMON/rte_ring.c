@@ -196,16 +196,62 @@ rte_ring_create(const char *name, unsigned count, int socket_id,
 		rte_ring_init(r, name, count, flags);
 
 		te->data = (void *) r;
+		r->memzone = mz;
 
 		TAILQ_INSERT_TAIL(ring_list, te, next);
 	} else {
 		r = NULL;
-		RTE_LOG(ERR, RING, "Cannot reserve memory\n");
+		RTE_LOG(ERR, RING, "Cannot reserve memory %s\n", mz_name);
 		rte_free(te);
 	}
 	rte_rwlock_write_unlock(RTE_EAL_TAILQ_RWLOCK);
 
 	return r;
+}
+
+/* free the ring */
+void
+rte_ring_free(struct rte_ring *r)
+{
+	struct rte_ring_list *ring_list = NULL;
+	struct rte_tailq_entry *te;
+
+	if (r == NULL)
+		return;
+
+	/*
+	* Ring was not created with rte_ring_create,
+	* therefore, there is no memzone to free.
+	*/
+	if (r->memzone == NULL) {
+		RTE_LOG(ERR, RING, "Cannot free ring (not created with rte_ring_create()");
+		return;
+	}
+
+	if (rte_memzone_free(r->memzone) != 0) {
+		RTE_LOG(ERR, RING, "Cannot free memory\n");
+		return;
+	}
+
+	ring_list = RTE_TAILQ_CAST(rte_ring_tailq.head, rte_ring_list);
+	rte_rwlock_write_lock(RTE_EAL_TAILQ_RWLOCK);
+
+	/* find out tailq entry */
+	TAILQ_FOREACH(te, ring_list, next) {
+		if (te->data == (void *) r)
+			break;
+	}
+
+	if (te == NULL) {
+		rte_rwlock_write_unlock(RTE_EAL_TAILQ_RWLOCK);
+		return;
+	}
+
+	TAILQ_REMOVE(ring_list, te, next);
+
+	rte_rwlock_write_unlock(RTE_EAL_TAILQ_RWLOCK);
+
+	rte_free(te);
 }
 
 /*
@@ -324,4 +370,47 @@ rte_ring_lookup(const char *name)
 	}
 
 	return r;
+}
+
+
+/* dump the status of all rings on the console */
+int
+rte_ring_list_get(char *pre_name, int pre_name_size, struct rte_ring *arrRing)
+{
+	const struct rte_tailq_entry *te;
+	struct rte_ring_list *ring_list;
+	struct rte_ring *r;
+	int ring_cnt = 0;
+
+	ring_list = RTE_TAILQ_CAST(rte_ring_tailq.head, rte_ring_list);
+
+	rte_rwlock_read_lock(RTE_EAL_TAILQ_RWLOCK);
+
+	TAILQ_FOREACH(te, ring_list, next) {
+		r = (struct rte_ring*) te->data;
+		if(r && (strncmp(r->name, pre_name, pre_name_size) == 0) )
+		{
+			memcpy( &(arrRing[ring_cnt++]), r, sizeof(struct rte_ring));
+		}
+	}
+
+	rte_rwlock_read_unlock(RTE_EAL_TAILQ_RWLOCK);
+
+	return ring_cnt;
+}
+
+/**
+ *  * Set to rw Lock
+ *   */
+void rte_ring_rw_lock()
+{
+	rte_rwlock_write_lock(RTE_EAL_TAILQ_RWLOCK);
+}
+
+/**
+ *  * Set to rw UnLock
+ *   */
+void rte_ring_rw_unlock()
+{
+	rte_rwlock_write_unlock(RTE_EAL_TAILQ_RWLOCK);
 }

@@ -274,4 +274,8 @@
 #define RTE_TOOLCHAIN "gcc"
 #undef RTE_TOOLCHAIN_GCC
 #define RTE_TOOLCHAIN_GCC 1
+#undef RTE_RING_MAX_CONS_COUNT 
+#define RTE_RING_MAX_CONS_COUNT 20 /**< Ring 의 Consumer 의 최대 숫자  */
+#undef RTE_RING_MAX_PROD_COUNT 
+#define RTE_RING_MAX_PROD_COUNT 20 /**< Ring 의Producer 의 최대 숫자  */
 #endif /* __RTE_CONFIG_H */

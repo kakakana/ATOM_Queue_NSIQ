@@ -135,6 +135,35 @@ struct rte_ring_debug_stats {
                                     *   if RTE_RING_PAUSE_REP not defined. */
 #endif
 
+struct rte_memzone; /* forward declaration, so as not to require memzone.h */
+
+//added by lhj 20160122
+/**
+ * An RTE Ring Consumer Info structure.
+ *
+ * For Backup Ring Data and Send RTS by Producer. 
+ * Insert consumer info in Ring Structure
+ */
+struct rte_ring_cons_info
+{
+	char name[RTE_RING_NAMESIZE];	/**< Name of the Consumer */
+	pid_t	pid;					/**< PID of the Consumer */
+	uint8_t	sleep;					/**< Sleep Status of the Consumer */
+};
+
+/**
+ * An RTE Ring Producer Info structure.
+ *
+ * For Backup Ring Data. 
+ * Insert Producer info in Ring Structure
+ */
+struct rte_ring_prod_info
+{
+	char name[RTE_RING_NAMESIZE];	/**< Name of the Producer*/
+	pid_t	pid;					/**< PID of the Producer(not use) */
+	uint8_t	sleep;					/**< Sleep Status of the Producer(not use) */
+};
+
 /**
  * An RTE ring structure.
  *
@@ -148,9 +177,14 @@ struct rte_ring_debug_stats {
 struct rte_ring {
 	char name[RTE_RING_NAMESIZE];    /**< Name of the ring. */
 	int flags;                       /**< Flags supplied at creation. */
+	const struct rte_memzone *memzone;
+			/**< Memzone, if any, containing the rte_ring */
 
 	/** Ring producer status. */
 	struct prod {
+		//added by lhj 20160314
+		struct rte_ring_prod_info prod_info[RTE_RING_MAX_PROD_COUNT]; /**< producer info */
+		uint32_t prod_count;
 		uint32_t watermark;      /**< Maximum items before EDQUOT. */
 		uint32_t sp_enqueue;     /**< True, if single producer. */
 		uint32_t size;           /**< Size of ring. */
@@ -161,6 +195,9 @@ struct rte_ring {
 
 	/** Ring consumer status. */
 	struct cons {
+		//added by lhj 20160122
+		struct rte_ring_cons_info cons_info[RTE_RING_MAX_CONS_COUNT];    /**< consumer info */
+		uint32_t cons_count;     /**< Count of Consumer */
 		uint32_t sc_dequeue;     /**< True, if single consumer. */
 		uint32_t size;           /**< Size of the ring. */
 		uint32_t mask;           /**< Mask (size-1) of ring. */
@@ -301,6 +338,14 @@ int rte_ring_init(struct rte_ring *r, const char *name, unsigned count,
  */
 struct rte_ring *rte_ring_create(const char *name, unsigned count,
 				 int socket_id, unsigned flags);
+
+/**
+ * De-allocate all memory used by the ring.
+ *
+ * @param r
+ *   Ring to free
+ */
+void rte_ring_free(struct rte_ring *r);
 
 /**
  * Change the high water mark.
@@ -1233,6 +1278,18 @@ rte_ring_dequeue_burst(struct rte_ring *r, void **obj_table, unsigned n)
 	else
 		return rte_ring_mc_dequeue_burst(r, obj_table, n);
 }
+
+int rte_ring_list_get(char *pre_name, int pre_name_size, struct rte_ring *arrRing);
+
+/**
+ * Set to rw Lock
+ */
+void rte_ring_rw_lock();
+
+/**
+ * Set to rw UnLock
+ */
+void rte_ring_rw_unlock();
 
 #ifdef __cplusplus
 }

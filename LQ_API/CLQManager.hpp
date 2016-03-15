@@ -9,55 +9,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <signal.h>
+#include <vector>
+#include <string>
 
-//! Define Memory Buffer 128 byte
-#define DEF_MEM_BUF_128		128
+#include <rte_config.h>
+#include "DbQuery.hpp"
+#include "CQuery.hpp"
 
-//! Define Memory Buffer 256 byte
-#define DEF_MEM_BUF_256		256
-
-//! Define Max Attach Ring Count
-#define DEF_MAX_RING	10
-
-//! Define Default Ring Element Count
-#define DEF_DEFAULT_RING_COUNT	0x40000
-
-//! Define Ring Name
-/*!
- * Ring Name For to Communicate to Application
- */
-#define DEF_RING_INFO_NAME  "RING_INFO" 
-
-//! Define Memory Pool Name
-/*!
- * Memory Pool Name For to Use in Application
- */
-#define DEF_BASE_MEMORY_POOL_NAME    "BASE_MEMORY_POOL"
-
-//! Define timeout Count
-#define DEF_TIME_OUT_COUNT	20
-
-//! Define usleep Time
-#define DEF_USLEEP_TIME	 300000
-
-//! Define Write Ring Type 
-#define DEF_RING_TYPE_READ	0
-
-//! Define Read Ring Type
-#define DEF_RING_TYPE_WRITE 1
-
-//! Define Ring Info Structure
-/*!
- * \struct _ring_info
- * \brief Structure for Ring Info
- * to Use in Application For to Create Ring
- */
-typedef struct _ring_info
-{
-	char    strName[DEF_MEM_BUF_128];   //!< Name of Ring
-	int     nSize;          //!< Size of Ring
-} RING_INFO;
-
+#include "global.h"
 
 /*!
  * \class CLQManager
@@ -67,16 +27,39 @@ class CLQManager
 {
 	public:
 		//! Constructor
-		CLQManager(char *a_strLogPath=NULL);
+		CLQManager(int a_nNodeID, char *a_szProcName, char *a_szLogPath=NULL);
 		//! Destructor
 		~CLQManager();
 		//! Initialize
-		int Initialize();
-		//! Attach Ring
-		int AttachRing(char *a_strName, int a_nType);	
+		int Initialize(p_function_hash *a_pFunc = NULL);
+		//! Wait Data
+		int ReadWait ( struct rte_ring **a_pRing );	
+		//! Read a Data From Ring
+		int ReadData( struct rte_ring *a_pstRing, void **a_pBuff );
+		//! Read several Data From Ring
+		int ReadBulkData( struct rte_ring *a_pstRing, void **a_pBuff, int a_nCount );
+		//! Write Data
+		int WriteData(void **a_pstData, int a_nCount, void *a_pArgs = NULL);
+		//! Get Memory Buffer From Memory Pool
+		int GetDataBuffer(int a_nCount, void **a_pBuff);
+		//! Set Sleep Status in the Ring
+		int SetSleepFlag(struct rte_ring *a_pstRing);
 	private:
+		//! Db Connector
+		DbQuery	*m_pclsDbConn;
+		//! Buffer 
+		char m_szBuffer[DEF_MEM_BUF_2048];
+		//! Backup Flag 
+		bool m_bBackup;
 		//! Log Path
-		char m_strLogPath[DEF_MEM_BUF_256];
+		char m_szLogPath[DEF_MEM_BUF_256];
+		//! Process name
+		char m_szProcName[DEF_MEM_BUF_128];
+		//! Node ID
+		int m_unNodeID;
+		//! Backup File Header
+		BACKUP_INFO m_stBackupHead;
+
 		//! Log Path Pointer
 		char *m_pLogPath;
 		//! Read Ring Current Count
@@ -84,18 +67,40 @@ class CLQManager
 		//! Write Ring Curret Count
 		uint8_t m_unWriteRingCount;
 		//! Read Ring
-		struct rte_ring *m_pstReadRing[DEF_MAX_RING];
+		RING_INFO m_stReadRingInfo[DEF_MAX_RING];
+		//! Read Ring Position
+		uint32_t	m_unarrReadPosition[DEF_MAX_RING];
 		//! Write Ring
-		struct rte_ring *m_pstWriteRing[DEF_MAX_RING];
-
+		RING_INFO m_stWriteRingInfo[DEF_MAX_RING];
+		//! Write Ring Position(Idx)
+		uint32_t	m_unarrWritePosition[DEF_MAX_RING];
+		//! Cons Ring For Insert Consumers Info ( Name, PID )
+		struct rte_ring *m_pstConsRing;
+		
 		//! Mempool For To Use to Communicate with MRT
 		struct rte_mempool *m_pstMemPool;
 		//! Ring For To Use to Communicate with MRT
 		struct rte_ring *m_pstRingInfo;
 
+		//! Structure of Signal, For Process to Signal Event
+		sigset_t	m_stSigSet;
+		siginfo_t	m_stSigInfo;
 
-		//! Send Ring Info to MRT
-		int SendRingInfo(char *a_strName, struct rte_ring **a_stRing);	
+		//! Function For Hash
+		p_function_hash *m_pfuncHash;
+
+		//! Generate Query
+		char *GetQuery(const char *a_szFmt, ...);
+		//! Generate Q Name
+		char *GetQName(const char *a_szWrite, const char *a_szRead, char a_cMultiType);
+		//! Attach Ring
+		int AttachRing(const char *a_szWrite, const char *a_szRead, int a_nType, char a_cMultiType);	
+		//! Create Ring 
+		int CreateRing(char *a_szName, struct rte_ring **a_stRing);	
+		//! Insert Consumers Info 
+		int InsertConsInfo(char *a_szName, pid_t a_stPID, struct rte_ring *a_pstRing);
+		//! Insert Producer Info 
+		int InsertProdInfo(char *a_szName, pid_t a_stPID, struct rte_ring *a_pstRing);
 };
 
 #endif

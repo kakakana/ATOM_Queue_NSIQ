@@ -1,0 +1,17 @@
+#ifndef _CQUERY_HPP_
+#define _CQUERY_HPP_
+
+#undef DEF_QUERY_INIT_READ_Q
+#define DEF_QUERY_INIT_READ_Q \
+	"SELECT * FROM TAT_QUEUE_DEF " \
+	"WHERE " \
+	"NODE_ID = %d AND READ_PROC = '%s'" 
+
+#undef DEF_QUERY_INIT_WRITE_Q
+#define DEF_QUERY_INIT_WRITE_Q \
+	"SELECT * FROM TAT_QUEUE_DEF " \
+	"WHERE " \
+	"NODE_ID = %d AND WRITE_PROC = '%s'" 
+
+#endif
+
