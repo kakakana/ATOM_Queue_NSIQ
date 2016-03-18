@@ -62,6 +62,9 @@ eal_runtime_config_path(void)
 
 	if (getuid() != 0 && home_dir != NULL)
 		directory = home_dir;
+	else if(getuid() == 0)
+		directory = getenv("LQ_HOME");
+
 	snprintf(buffer, sizeof(buffer) - 1, RUNTIME_CONFIG_FMT, directory,
 			internal_config.hugefile_prefix);
 	return buffer;
@@ -79,6 +82,9 @@ eal_hugepage_info_path(void)
 
 	if (getuid() != 0 && home_dir != NULL)
 		directory = home_dir;
+	else if(getuid() == 0)
+		directory = getenv("LQ_HOME");
+
 	snprintf(buffer, sizeof(buffer) - 1, HUGEPAGE_INFO_FMT, directory,
 			internal_config.hugefile_prefix);
 	return buffer;

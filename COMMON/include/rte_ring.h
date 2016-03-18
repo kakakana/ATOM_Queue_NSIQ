@@ -149,6 +149,10 @@ struct rte_ring_cons_info
 	char name[RTE_RING_NAMESIZE];	/**< Name of the Consumer */
 	pid_t	pid;					/**< PID of the Consumer */
 	uint8_t	sleep;					/**< Sleep Status of the Consumer */
+	volatile uint32_t head;  /**< Consumer head. */
+	volatile uint32_t tail;  /**< Consumer tail. */
+	uint32_t start_idx;  /**< Consumer Start Position. */
+	uint8_t	restore;  /**< Consumer Restore Mode Flag. */
 };
 
 /**
@@ -162,6 +166,11 @@ struct rte_ring_prod_info
 	char name[RTE_RING_NAMESIZE];	/**< Name of the Producer*/
 	pid_t	pid;					/**< PID of the Producer(not use) */
 	uint8_t	sleep;					/**< Sleep Status of the Producer(not use) */
+	volatile uint32_t head;  /**< Producer head. */
+	volatile uint32_t tail;  /**< Producer tail. */
+	uint32_t start_idx;  /**< Producer Start Position. */
+	uint8_t restore;  /**< Producer Restore Mode Flag. */
+
 };
 
 /**
@@ -528,11 +537,16 @@ __rte_ring_mp_do_enqueue(struct rte_ring *r, void * const *obj_table,
 		 * to proceed and finish with ring dequeue operation. */
 		if (RTE_RING_PAUSE_REP_COUNT &&
 		    ++rep == RTE_RING_PAUSE_REP_COUNT) {
-			rep = 0;
-			sched_yield();
+			//modified by lhj 2016.03.17
+			r->prod.tail = prod_head;
+			break;
+//			rep = 0;
+//			sched_yield();
 		}
 	}
+
 	r->prod.tail = prod_next;
+
 	return ret;
 }
 
@@ -689,6 +703,7 @@ __rte_ring_mc_do_dequeue(struct rte_ring *r, void **obj_table,
 
 	/* copy in table */
 	DEQUEUE_PTRS();
+
 	rte_compiler_barrier();
 
 	/*
@@ -703,15 +718,21 @@ __rte_ring_mc_do_dequeue(struct rte_ring *r, void **obj_table,
 		 * to proceed and finish with ring dequeue operation. */
 		if (RTE_RING_PAUSE_REP_COUNT &&
 		    ++rep == RTE_RING_PAUSE_REP_COUNT) {
-			rep = 0;
-			sched_yield();
+			//modified by lhj 2016.03.17 
+			r->cons.tail = cons_head;
+			break;
+//			rep = 0;
+//			sched_yield();
+
 		}
 	}
+
 	__RING_STAT_ADD(r, deq_success, n);
 	r->cons.tail = cons_next;
 
 	return behavior == RTE_RING_QUEUE_FIXED ? 0 : n;
 }
+
 
 /**
  * @internal Dequeue several objects from a ring (NOT multi-consumers safe).
@@ -986,7 +1007,7 @@ rte_ring_sc_dequeue_bulk(struct rte_ring *r, void **obj_table, unsigned n)
  *     dequeued.
  */
 static inline int __attribute__((always_inline))
-rte_ring_dequeue_bulk(struct rte_ring *r, void **obj_table, unsigned n)
+rte_ring_dequeue_bulk(struct rte_ring *r, void **obj_table, unsigned n )
 {
 	if (r->cons.sc_dequeue)
 		return rte_ring_sc_dequeue_bulk(r, obj_table, n);
@@ -1290,6 +1311,360 @@ void rte_ring_rw_lock();
  * Set to rw UnLock
  */
 void rte_ring_rw_unlock();
+
+/**
+ * @internal 비정상 종료시 Ring 의 복구를 위해서 사용하는 함수 
+ * 인덱스를 지정하여서 지정된 인덱스 부터 n 개의 데이터를 Write
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of void * pointers (objects).
+ * @param n
+ *   The number of objects to add in the ring from the obj_table.
+ * @param start_idx
+ *   The index number of ring buffer, To read start from this index
+ * @return
+ *   - 0: Success; objects enqueue.
+ */
+static inline int __attribute__((always_inline))
+rte_ring_mp_enqueue_bulk_start_from(struct rte_ring *r, void * const *obj_table,
+			 unsigned n, unsigned start_idx)
+{
+	uint32_t prod_head = start_idx, prod_next = start_idx + n;
+	const unsigned max = n;
+	unsigned i, rep = 0;
+	uint32_t mask = r->prod.mask;
+	int ret;
+
+	/* write entries in ring */
+	ENQUEUE_PTRS();
+	rte_compiler_barrier();
+
+#if 0
+	/*
+	 * If there are other enqueues in progress that preceded us,
+	 * we need to wait for them to complete
+	 */
+	while (unlikely(r->prod.tail != prod_head)) {
+		rte_pause();
+		/* Set RTE_RING_PAUSE_REP_COUNT to avoid spin too long waiting
+		 * for other thread finish. It gives pre-empted thread a chance
+		 * to proceed and finish with ring dequeue operation. */
+		if (RTE_RING_PAUSE_REP_COUNT &&
+		    ++rep == RTE_RING_PAUSE_REP_COUNT) {
+			rep = 0;
+			sched_yield();
+		}
+	}
+#endif
+
+	r->prod.tail = prod_next;
+
+	return ret;
+}
+
+/**
+ * @internal Enqueue several objects on the ring (multi-producers safe).
+ *
+ * This function uses a "compare and set" instruction to move the
+ * producer index atomically.
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of void * pointers (objects).
+ * @param n
+ *   The number of objects to add in the ring from the obj_table.
+ * @param behavior
+ *   RTE_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
+ *   RTE_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
+ * @param idx
+ *   The index number of caller of this function in ring->prod.prod_info structure (added by lhj 2016.03.16)
+ * @return
+ *   Depend on the behavior value
+ *   if behavior = RTE_RING_QUEUE_FIXED
+ *   - 0: Success; objects enqueue.
+ *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
+ *     high water mark is exceeded.
+ *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
+ *   if behavior = RTE_RING_QUEUE_VARIABLE
+ *   - n: Actual number of objects enqueued.
+ */
+static inline int __attribute__((always_inline))
+rte_ring_mp_enqueue_bulk_idx(struct rte_ring *r, void * const *obj_table,
+			 unsigned n, enum rte_ring_queue_behavior behavior, unsigned idx)
+{
+	uint32_t prod_head, prod_next;
+	uint32_t cons_tail, free_entries;
+	const unsigned max = n;
+	int success;
+	unsigned i, rep = 0;
+	uint32_t mask = r->prod.mask;
+	int ret;
+
+	if(unlikely(r->prod.prod_info[idx].restore))
+	{
+		r->prod.prod_info[idx].restore = 0;
+		return rte_ring_mp_enqueue_bulk_start_from(r, obj_table, n, r->cons.cons_info[idx].start_idx);
+	}
+
+	/* move prod.head atomically */
+	do {
+		/* Reset n to the initial burst count */
+		n = max;
+
+		prod_head = r->prod.head;
+		r->prod.prod_info[idx].tail = prod_head;
+
+		cons_tail = r->cons.tail;
+		/* The subtraction is done between two unsigned 32bits value
+		 * (the result is always modulo 32 bits even if we have
+		 * prod_head > cons_tail). So 'free_entries' is always between 0
+		 * and size(ring)-1. */
+		free_entries = (mask + cons_tail - prod_head);
+
+		/* check that we have enough room in ring */
+		if (unlikely(n > free_entries)) {
+			if (behavior == RTE_RING_QUEUE_FIXED) {
+				__RING_STAT_ADD(r, enq_fail, n);
+				return -ENOBUFS;
+			}
+			else {
+				/* No free entry available */
+				if (unlikely(free_entries == 0)) {
+					__RING_STAT_ADD(r, enq_fail, n);
+					return 0;
+				}
+
+				n = free_entries;
+			}
+		}
+
+		prod_next = prod_head + n;
+		success = rte_atomic32_cmpset(&r->prod.head, prod_head,
+					      prod_next);
+	} while (unlikely(success == 0));
+
+	//added by lhj 2016.03.16 (For Write Complete)
+	r->prod.prod_info[idx].head = prod_next;
+
+	/* write entries in ring */
+	ENQUEUE_PTRS();
+	rte_compiler_barrier();
+
+	/* if we exceed the watermark */
+	if (unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
+		ret = (behavior == RTE_RING_QUEUE_FIXED) ? -EDQUOT :
+				(int)(n | RTE_RING_QUOT_EXCEED);
+		__RING_STAT_ADD(r, enq_quota, n);
+	}
+	else {
+		ret = (behavior == RTE_RING_QUEUE_FIXED) ? 0 : n;
+		__RING_STAT_ADD(r, enq_success, n);
+	}
+
+	/*
+	 * If there are other enqueues in progress that preceded us,
+	 * we need to wait for them to complete
+	 */
+	while (unlikely(r->prod.tail != prod_head)) {
+		rte_pause();
+
+		/* Set RTE_RING_PAUSE_REP_COUNT to avoid spin too long waiting
+		 * for other thread finish. It gives pre-empted thread a chance
+		 * to proceed and finish with ring dequeue operation. */
+		if (RTE_RING_PAUSE_REP_COUNT &&
+		    ++rep == RTE_RING_PAUSE_REP_COUNT) {
+			rep = 0;
+			sched_yield();
+		}
+	}
+
+	r->prod.tail = prod_next;
+
+	//added by lhj 2016.03.16 (For Write Complete)
+	r->prod.prod_info[idx].tail = prod_next;
+
+
+	return ret;
+}
+
+/**
+ * @internal 비정상 종료시 Ring 의 복구를 위해서 사용하는 함수 
+ * 인덱스를 지정하여서 지정된 인덱스 부터 n 개의 데이터를 읽어들임
+ *
+ * This function uses a "compare and set" instruction to move the
+ * consumer index atomically.
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of void * pointers (objects) that will be filled.
+ * @param n
+ *   The number of objects to dequeue from the ring to the obj_table.
+ * @param start_idx
+ *   The index number of ring buffer, To read start from this index
+ * @return
+ *   - 0: Success; objects dequeued.
+ */
+
+static inline int __attribute__((always_inline))
+rte_ring_mc_dequeue_bulk_start_from(struct rte_ring *r, void **obj_table,
+		 unsigned n, unsigned start_idx)
+{
+	uint32_t cons_head, prod_tail;
+	uint32_t cons_next, entries;
+	const unsigned max = n;
+	int success;
+	unsigned i, rep = 0;
+	uint32_t mask = r->prod.mask;
+
+	cons_head = start_idx;
+
+	/* copy in table */
+	DEQUEUE_PTRS();
+
+	rte_compiler_barrier();
+
+	return 0;
+}
+
+/**
+ * @internal Dequeue several objects from a ring (multi-consumers safe). When
+ * the request objects are more than the available objects, only dequeue the
+ * actual number of objects
+ *
+ * This function uses a "compare and set" instruction to move the
+ * consumer index atomically.
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of void * pointers (objects) that will be filled.
+ * @param n
+ *   The number of objects to dequeue from the ring to the obj_table.
+ * @param behavior
+ *   RTE_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
+ *   RTE_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
+ * @param idx
+ *   The index number of caller of this function in ring->cons.cons_info structure (added by lhj 2016.03.16)
+ * @return
+ *   Depend on the behavior value
+ *   if behavior = RTE_RING_QUEUE_FIXED
+ *   - 0: Success; objects dequeued.
+ *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
+ *     dequeued.
+ *   if behavior = RTE_RING_QUEUE_VARIABLE
+ *   - n: Actual number of objects dequeued.
+ */
+
+static inline int __attribute__((always_inline))
+rte_ring_mc_dequeue_bulk_idx(struct rte_ring *r, void **obj_table,
+		 unsigned n, enum rte_ring_queue_behavior behavior, unsigned idx)
+{
+	uint32_t cons_head, prod_tail;
+	uint32_t cons_next, entries;
+	const unsigned max = n;
+	int success;
+	unsigned i, rep = 0;
+	uint32_t mask = r->prod.mask;
+
+	if(unlikely(r->cons.cons_info[idx].restore))
+	{
+		r->cons.cons_info[idx].restore = 0;
+		return rte_ring_mc_dequeue_bulk_start_from(r, obj_table, n, r->cons.cons_info[idx].start_idx);
+	}
+
+	/* move cons.head atomically */
+	do {
+		/* Restore n as it may change every loop */
+		n = max;
+
+
+		cons_head = r->cons.head;
+
+		r->cons.cons_info[idx].tail = cons_head;
+
+		prod_tail = r->prod.tail;
+		/* The subtraction is done between two unsigned 32bits value
+		 * (the result is always modulo 32 bits even if we have
+		 * cons_head > prod_tail). So 'entries' is always between 0
+		 * and size(ring)-1. */
+		entries = (prod_tail - cons_head);
+
+		/* Set the actual entries for dequeue */
+		if (n > entries) {
+			if (behavior == RTE_RING_QUEUE_FIXED) {
+				__RING_STAT_ADD(r, deq_fail, n);
+				return -ENOENT;
+			}
+			else {
+				if (unlikely(entries == 0)){
+					__RING_STAT_ADD(r, deq_fail, n);
+					return 0;
+				}
+
+				n = entries;
+			}
+		}
+
+		cons_next = cons_head + n;
+		success = rte_atomic32_cmpset(&r->cons.head, cons_head,
+					      cons_next);
+	} while (unlikely(success == 0));
+
+	r->cons.cons_info[idx].head = cons_next;
+//	printf( "cons_head %u, cons_next %u,  tail %u,  head %u\n", 
+//					cons_head, cons_next, r->cons.cons_info[idx].tail, r->cons.cons_info[idx].head);
+	
+	/* copy in table */
+	DEQUEUE_PTRS();
+
+	rte_compiler_barrier();
+
+	return behavior == RTE_RING_QUEUE_FIXED ? 0 : n;
+}
+
+
+/**
+ * @internal Move to Tail Position (multi_consumers safe)
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param cons_head
+ *   The Value of ring's head position
+ * @param cons_next
+ *   The Value of ring's next position
+ */
+static inline int __attribute__((always_inline))
+rte_ring_read_complete(struct rte_ring *r, unsigned cons_head, unsigned cons_next)
+{
+//	printf( "r->cons.tail = %u, cons_head %u, cons_next %u\n", 
+//					r->cons.tail, cons_head, cons_next);
+	unsigned rep = 0;
+	/*
+	 * If there are other dequeues in progress that preceded us,
+	 * we need to wait for them to complete
+	 */
+	while (unlikely(r->cons.tail != cons_head)) {
+		rte_pause();
+
+#if 0
+		/* Set RTE_RING_PAUSE_REP_COUNT to avoid spin too long waiting
+		 * for other thread finish. It gives pre-empted thread a chance
+		 * to proceed and finish with ring dequeue operation. */
+		if (RTE_RING_PAUSE_REP_COUNT &&
+		    ++rep == RTE_RING_PAUSE_REP_COUNT) {
+			rep = 0;
+			sched_yield();
+		}
+#endif
+	}
+
+	__RING_STAT_ADD(r, deq_success, n);
+	r->cons.tail = cons_next;
+}
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,11 @@
+/*!
+ * \addtogroup LQ-API
+ * \author 이현재(presentlee@ntels.com)
+ * \date 2016.03.18
+ * \description
+ * LQ API 는 기존 DPDK Library 에서 Ring 의 구조만을 떼어내어서
+ * 프로세스간 데이터 혹은 명령 송수신에 도움을 주기 위하여 작성
+ */
 #ifndef _LQ_GLOBAL_H_
 #define _LQ_GLOBAL_H_
 
@@ -21,6 +29,12 @@
 
 //! Define Memory Buffer 2048 byte
 #define DEF_MEM_BUF_2048	2048
+
+//! Define Memory Buffer 1 Mega byte
+#define DEF_MEM_BUF_1M (DEF_MEM_BUF_1024 * DEF_MEM_BUF_1024)
+
+//! Define Jumbo Memory Buffer Size
+#define DEF_MEM_JUMBO DEF_MEM_BUF_1M
 
 //! Define Max Attach Ring Count
 #define DEF_MAX_RING	10
@@ -52,8 +66,18 @@
 //! Define Command Signal
 #define DEF_SIG_COMMAND 1
 
+//! Define Max Bulk
+#define DEF_MAX_BULK	32
+
 //! Define Memory Buffer Data Size
 #define DEF_MBUF_DATA_SIZE 2048
+
+//! Define Max Fail Count
+/*!
+ * 만약 데이터 전송시 다음의 Count 만큼 실패 할 경우
+ * Queue Full 이라고 판단하여서 Ring 에 연결된 모든 Consumer 에게 Signal 전달
+ */
+#define DEF_MAX_FAIL_CNT	10000
 
 //! Define String Format For Q Name
 #define DEF_STR_FORMAT_Q_NAME "%s_%s"
@@ -88,10 +112,11 @@ using namespace std;
  */
 typedef struct _ring_info
 {
-	struct rte_ring *pRing;	//!< Ring
-	int				nIdx;	//!< Index of Consumer Info Array in the ring 
-	char	szName[DEF_MEM_BUF_64];	 //!< Name of this Ring
-	vector<string> vecRelProc;
+	struct rte_ring	*pstRing;		//!< Ring
+	uint32_t		unFailCnt;		//!< Count of Send Error
+	int				nIdx;			//!< Index of Consumer Info Array in the ring 
+	char			szName[DEF_MEM_BUF_64];	 //!< Name of this Ring
+	vector<string>	vecRelProc;		//!< Name of Relation Process
 }RING_INFO;
 
 //! Define Consumer Info Structure For Backup
@@ -140,7 +165,6 @@ typedef struct _backup_info
 	uint32_t	unMask;
 	CONS_INFO	stConsInfo[RTE_RING_MAX_CONS_COUNT]; //20
 	PROD_INFO	stProdInfo[RTE_RING_MAX_PROD_COUNT]; //20
-
 }BACKUP_INFO;
 
 //! Define Hash Function Pointer
