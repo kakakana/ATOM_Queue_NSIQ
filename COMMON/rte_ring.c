@@ -170,7 +170,7 @@ rte_ring_create(const char *name, unsigned count, int socket_id,
 
 	ring_size = rte_ring_get_memsize(count);
 	if (ring_size < 0) {
-		rte_errno = ring_size;
+		rte_errno = -ring_size;
 		return NULL;
 	}
 
@@ -375,11 +375,10 @@ rte_ring_lookup(const char *name)
 
 /* dump the status of all rings on the console */
 int
-rte_ring_list_get(char *pre_name, int pre_name_size, struct rte_ring *arrRing)
+rte_ring_list_get(struct rte_ring **ring_array)
 {
 	const struct rte_tailq_entry *te;
 	struct rte_ring_list *ring_list;
-	struct rte_ring *r;
 	int ring_cnt = 0;
 
 	ring_list = RTE_TAILQ_CAST(rte_ring_tailq.head, rte_ring_list);
@@ -387,11 +386,7 @@ rte_ring_list_get(char *pre_name, int pre_name_size, struct rte_ring *arrRing)
 	rte_rwlock_read_lock(RTE_EAL_TAILQ_RWLOCK);
 
 	TAILQ_FOREACH(te, ring_list, next) {
-		r = (struct rte_ring*) te->data;
-		if(r && (strncmp(r->name, pre_name, pre_name_size) == 0) )
-		{
-			memcpy( &(arrRing[ring_cnt++]), r, sizeof(struct rte_ring));
-		}
+		ring_array[ring_cnt++] = te->data; 
 	}
 
 	rte_rwlock_read_unlock(RTE_EAL_TAILQ_RWLOCK);

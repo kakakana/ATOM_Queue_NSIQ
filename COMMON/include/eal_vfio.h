@@ -41,7 +41,7 @@
 #include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)
 #include <linux/vfio.h>
-#include <rteconfig.h>
+#include <rte_config.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #define RTE_PCI_MSIX_TABLE_BIR    0x7

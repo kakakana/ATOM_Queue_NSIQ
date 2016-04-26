@@ -89,6 +89,15 @@ struct rte_config {
 } __attribute__((__packed__));
 
 /**
+ * The IPC Configuration structure.
+ */
+struct rte_ipc_config {
+	uint32_t ipc_count;
+	uint64_t ipc_size;
+	char ipc_name[RTE_MAX_IPC_NAME_LEN];
+} __attribute__((__packed__));
+
+/**
  * Get the global configuration structure.
  *
  * @return
@@ -145,6 +154,8 @@ int rte_eal_iopl_init(void);
  *   The argc argument that was given to the main() function.
  * @param argv
  *   The argv argument that was given to the main() function.
+ * @param ipc_config
+ *   The configuration of IPC File to create memory pool
  * @return
  *   - On success, the number of parsed arguments, which is greater or
  *     equal to zero. After the call to rte_eal_init(),
@@ -152,7 +163,7 @@ int rte_eal_iopl_init(void);
  *     not be accessed by the application.
  *   - On failure, a negative error value.
  */
-int rte_eal_init(char *log_path);
+int rte_eal_init(char *log_path, struct rte_ipc_config *ipc_config);
 /**
  * Usage function typedef used by the application usage function.
  *

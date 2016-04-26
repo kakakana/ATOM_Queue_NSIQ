@@ -61,7 +61,9 @@ enum rte_page_sizes {
 	RTE_PGSIZE_256M  = 1ULL << 28,
 	RTE_PGSIZE_512M  = 1ULL << 29,
 	RTE_PGSIZE_1G    = 1ULL << 30,
+	RTE_PGSIZE_2G    = 1ULL << 31,
 	RTE_PGSIZE_4G    = 1ULL << 32,
+	RTE_PGSIZE_8G    = 1ULL << 33,
 	RTE_PGSIZE_16G   = 1ULL << 34,
 };
 

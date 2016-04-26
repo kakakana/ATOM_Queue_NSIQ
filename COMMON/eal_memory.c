@@ -1560,7 +1560,6 @@ rte_eal_hugepage_attach(void)
 	munmap((void *)(uintptr_t)hp, size);
 	close(fd_zero);
 	close(fd_hugepage);
-	printf("eeeeeeeeeeeeeeeeeeee\n");
 	return 0;
 
 error:

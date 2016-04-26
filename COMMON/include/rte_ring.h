@@ -137,6 +137,21 @@ struct rte_ring_debug_stats {
 
 struct rte_memzone; /* forward declaration, so as not to require memzone.h */
 
+//added by lhj 20160323
+/**
+ * An RTE Ring Backup File Info Structure
+ * 
+ * For Backup Ring Data to File
+ * Insert Backup File mask, and fd, and virtual address
+ */
+struct rte_ring_backup_info
+{
+	uint32_t	mask;		/**< Mask of the Backup File */
+	uint32_t	size;		/**< MMap size of Backup File */
+	int			fd;			/**< File descriptor of Backup File */
+	void		*backup;		/**< virtual address of Backup File */
+};
+
 //added by lhj 20160122
 /**
  * An RTE Ring Consumer Info structure.
@@ -153,6 +168,7 @@ struct rte_ring_cons_info
 	volatile uint32_t tail;  /**< Consumer tail. */
 	uint32_t start_idx;  /**< Consumer Start Position. */
 	uint8_t	restore;  /**< Consumer Restore Mode Flag. */
+	struct rte_ring_backup_info backup_info;  /**< Backup file info */
 };
 
 /**
@@ -170,6 +186,7 @@ struct rte_ring_prod_info
 	volatile uint32_t tail;  /**< Producer tail. */
 	uint32_t start_idx;  /**< Producer Start Position. */
 	uint8_t restore;  /**< Producer Restore Mode Flag. */
+	struct rte_ring_backup_info backup_info;  /**< Backup file info */
 
 };
 
@@ -1300,7 +1317,7 @@ rte_ring_dequeue_burst(struct rte_ring *r, void **obj_table, unsigned n)
 		return rte_ring_mc_dequeue_burst(r, obj_table, n);
 }
 
-int rte_ring_list_get(char *pre_name, int pre_name_size, struct rte_ring *arrRing);
+int rte_ring_list_get(struct rte_ring **arrRing);
 
 /**
  * Set to rw Lock
@@ -1332,10 +1349,9 @@ rte_ring_mp_enqueue_bulk_start_from(struct rte_ring *r, void * const *obj_table,
 			 unsigned n, unsigned start_idx)
 {
 	uint32_t prod_head = start_idx, prod_next = start_idx + n;
-	const unsigned max = n;
-	unsigned i, rep = 0;
+	unsigned i = 0;
 	uint32_t mask = r->prod.mask;
-	int ret;
+	int ret = 0;
 
 	/* write entries in ring */
 	ENQUEUE_PTRS();
@@ -1513,11 +1529,8 @@ static inline int __attribute__((always_inline))
 rte_ring_mc_dequeue_bulk_start_from(struct rte_ring *r, void **obj_table,
 		 unsigned n, unsigned start_idx)
 {
-	uint32_t cons_head, prod_tail;
-	uint32_t cons_next, entries;
-	const unsigned max = n;
-	int success;
-	unsigned i, rep = 0;
+	uint32_t cons_head;
+	unsigned i = 0;
 	uint32_t mask = r->prod.mask;
 
 	cons_head = start_idx;
@@ -1567,7 +1580,7 @@ rte_ring_mc_dequeue_bulk_idx(struct rte_ring *r, void **obj_table,
 	uint32_t cons_next, entries;
 	const unsigned max = n;
 	int success;
-	unsigned i, rep = 0;
+	unsigned i = 0;
 	uint32_t mask = r->prod.mask;
 
 	if(unlikely(r->cons.cons_info[idx].restore))
@@ -1640,9 +1653,6 @@ rte_ring_mc_dequeue_bulk_idx(struct rte_ring *r, void **obj_table,
 static inline int __attribute__((always_inline))
 rte_ring_read_complete(struct rte_ring *r, unsigned cons_head, unsigned cons_next)
 {
-//	printf( "r->cons.tail = %u, cons_head %u, cons_next %u\n", 
-//					r->cons.tail, cons_head, cons_next);
-	unsigned rep = 0;
 	/*
 	 * If there are other dequeues in progress that preceded us,
 	 * we need to wait for them to complete
@@ -1664,6 +1674,8 @@ rte_ring_read_complete(struct rte_ring *r, unsigned cons_head, unsigned cons_nex
 
 	__RING_STAT_ADD(r, deq_success, n);
 	r->cons.tail = cons_next;
+
+	return 0;
 }
 
 #ifdef __cplusplus

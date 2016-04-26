@@ -275,7 +275,19 @@
 #undef RTE_TOOLCHAIN_GCC
 #define RTE_TOOLCHAIN_GCC 1
 #undef RTE_RING_MAX_CONS_COUNT 
-#define RTE_RING_MAX_CONS_COUNT 20 /**< Ring 의 Consumer 의 최대 숫자  */
+#define RTE_RING_MAX_CONS_COUNT 50 /**< Ring 의 Consumer 의 최대 숫자  */
 #undef RTE_RING_MAX_PROD_COUNT 
-#define RTE_RING_MAX_PROD_COUNT 20 /**< Ring 의Producer 의 최대 숫자  */
+#define RTE_RING_MAX_PROD_COUNT 50 /**< Ring 의Producer 의 최대 숫자  */
+#undef RTE_MAX_IPC	
+#define RTE_MAX_IPC 10 /**< Memory Pool 을 생성하기 위한 IPC 의 최대 숫자 */
+#undef RTE_MAX_IPC_NAME_LEN
+#define RTE_MAX_IPC_NAME_LEN 50 /**< Memory Pool 을 생성하기 위한 IPC 이름의 최대 길이 */ 
+#undef RTE_MBUF_DATA_SIZE
+#define RTE_MBUF_DATA_SIZE 2048
+#undef RTE_MBUF_CACHE_SIZE
+#define RTE_MBUF_CACHE_SIZE 512
+#undef RTE_MBUF_OVERHEAD
+#define RTE_MBUF_OVERHEAD (sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
+#undef RTE_MBUF_SIZE
+#define RTE_MBUF_SIZE (RTE_MBUF_DATA_SIZE + RTE_MBUF_OVERHEAD)
 #endif /* __RTE_CONFIG_H */

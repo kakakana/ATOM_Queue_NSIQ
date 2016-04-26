@@ -708,7 +708,7 @@ rte_eal_iopl_init(void)
 #endif
 /* Launch threads, called at application init(). */
 int
-rte_eal_init(char *log_path)
+rte_eal_init(char *log_path, struct rte_ipc_config *ipc_config)
 {
 //	argc = 5;
 //	argv[0] = NULL;
@@ -730,7 +730,7 @@ rte_eal_init(char *log_path)
 	if (internal_config.no_hugetlbfs == 0 &&
 			internal_config.process_type != RTE_PROC_SECONDARY &&
 			internal_config.xen_dom0_support == 0 &&
-			eal_hugepage_info_init() < 0)
+			eal_hugepage_info_init(ipc_config) < 0)
 		rte_panic("Cannot get hugepage information\n");
 
 	if (internal_config.memory == 0 && internal_config.force_sockets == 0) {

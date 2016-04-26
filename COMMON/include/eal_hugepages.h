@@ -62,6 +62,6 @@ struct hugepage_file {
  * Read the information from linux on what hugepages are available
  * for the EAL to use
  */
-int eal_hugepage_info_init(void);
+int eal_hugepage_info_init(struct rte_ipc_config *ipc_config);
 
 #endif /* EAL_HUGEPAGES_H */

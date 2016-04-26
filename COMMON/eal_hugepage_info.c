@@ -275,17 +275,30 @@ error:
  * initialization procedure.
  */
 int
-eal_hugepage_info_init(void)
+eal_hugepage_info_init(struct rte_ipc_config *ipc_config)
 {
 	unsigned i, num_sizes = 0;
 
-	for( i = 0; i <2 ; i++)
+	if(ipc_config == NULL) 
+	{
+		RTE_LOG(ERR, EAL, "IPC Config is NULL For Create Memory Pool ");
+		return -1;
+	}
+
+	if(ipc_config->ipc_count > RTE_MAX_IPC)
+	{
+		RTE_LOG(ERR, EAL, "IPC Count is Over Max : %u, Cur : %u", RTE_MAX_IPC, ipc_config->ipc_count);
+		return -1;
+	}
+
+	for( i = 0; i < ipc_config->ipc_count ; i++)
 	{
 		struct hugepage_info *hpi = \
 				&internal_config.hugepage_info[num_sizes];
-		hpi->hugepage_sz = RTE_PGSIZE_1G;
+		hpi->hugepage_sz = ipc_config->ipc_size;
+//		hpi->hugepage_sz = RTE_PGSIZE_1G;
 	//	hpi->hugedir = get_hugepage_dir(hpi->hugepage_sz);
-		snprintf(hpi->hugedir, 128, "%s_%02d",  "test_ipc", i);
+		snprintf(hpi->hugedir, 128, "%s_%02d",  ipc_config->ipc_name, i);
 
 		/* for now, put all pages into socket 0,
 		 * later they will be sorted */

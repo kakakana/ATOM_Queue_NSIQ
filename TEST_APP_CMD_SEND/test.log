@@ -1,0 +1,15 @@
+MEMPOOL: Cannot Alloc Mbuf
+RING: Insert Reader's Info Failed
+MEMPOOL: Cannot Alloc Mbuf
+RING: Insert Reader's Info Failed
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 0 , free_cnt 0
+EAL: read Count 156224 , free_cnt 156205
+EAL: read Count 1477216 , free_cnt 1477216
+EAL: read Count 3597568 , free_cnt 3597568
+EAL: read Count 5590272 , free_cnt 5590272
+EAL: read Count 7642976 , free_cnt 7642976
